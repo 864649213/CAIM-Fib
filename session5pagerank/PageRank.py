@@ -45,7 +45,7 @@ edgeList = [] # list of Edge
 edgeHash = dict() # hash of edge to ease the match
 airportList = [] # list of Airport
 airportHash = dict() # hash key IATA code -> Airport
-P = []
+Res = []
 
 def readAirports(fd):
     print("Reading Airport file from {0}".format(fd))
@@ -104,25 +104,27 @@ def computePageRanks():
     L = 0.85
     n = len(airportHash)
     P = [1/n]*n
-
     it = 0
     while (it < its):
         Q = [0.0]*n
-        for i in range(len(Q)):
+        for i in range(n):
             a = airportList[i]
-            sumP = 0
+            sumPR = 0
             for k,v in a.routeHash.items():
-                sumP += P[airportHash[k].index] * v.weight / airportHash[k].outweight
-            Q[i] = L * sumP + (1-L)/n
+                sumPR += P[airportHash[k].index] * v.weight / airportHash[k].outweight
+            Q[i] = L * sumPR + (1-L)/n
         P = Q
+        print(sum(i for i in P))
         it += 1
  
+    for x in P:
+        Res.append(x)
         
     return its
 
 
 def outputPageRanks():
-    for x in P:
+    for x in Res:
         print(x)
     
 
@@ -132,7 +134,7 @@ def main(argv=None):
     time1 = time.time()
     iterations = computePageRanks()
     time2 = time.time()
-    outputPageRanks()
+    #outputPageRanks()
     print("#Iterations:", iterations)
     print("Time of computePageRanks():", time2-time1)
 
