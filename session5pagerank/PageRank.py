@@ -143,9 +143,9 @@ def outputPageRanks():
         L.append(x)
         i += 1
     L.sort(key = lambda x: x[1], reverse = True)
-    print("#### (Airport Name, PR) ####")
+    print("#### (Airport Name : PR) ####")
     for (x,y) in L:
-        print("(%s, %s)"%(x, y))
+        print("(%s : %s)"%(x, y))
 
 
 
