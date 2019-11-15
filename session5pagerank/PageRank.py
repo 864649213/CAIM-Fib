@@ -36,16 +36,19 @@ class Airport:
         else:
             e = self.routeHash[incomingAirport]
             e.incWeight()
-            
+
         airportHash[e.origin].outweight += 1
 
-        
+
 
 edgeList = [] # list of Edge
 edgeHash = dict() # hash of edge to ease the match
 airportList = [] # list of Airport
 airportHash = dict() # hash key IATA code -> Airport
-Res = []
+PR = []
+
+L = 0.85
+tol = 10**(-10)
 
 def readAirports(fd):
     print("Reading Airport file from {0}".format(fd))
@@ -92,41 +95,59 @@ def readRoutes(fd):
             pass
         else:
             cont += 1
-            # We dont need it => less memory
-            # EdgeList.append(e)
-            # EdgeHash[origin + " - " + dest] = e
     routesTxt.close()
     print("There were {0} Edges with both IATA code".format(cont))
 
 def computePageRanks():
-    # Two strategies: set number of iterations or by toleration
-    its = 5
-    L = 0.85
     n = len(airportHash)
     P = [1/n]*n
-    it = 0
-    while (it < its):
+    # Disconnected nodes PR calculation
+    discN = len(list(filter(lambda a: a.outweight == 0.0, airportList)))
+    disconnectedPRfixed = (L/float(n-1))*discN  # outweight = n-1, so L/(n-1), and this for all discN nodes
+    disconnectPRvariable = 1/n  # All values in P at the first iteration are 1/n
+    ######## ------------------------------------------------------------------------------------- ########
+    stop = False
+    its = 0
+    while (not stop):
         Q = [0.0]*n
         for i in range(n):
             a = airportList[i]
+            totalDiscPR = disconnectedPRfixed*disconnectPRvariable
             sumPR = 0
             for k,v in a.routeHash.items():
                 sumPR += P[airportHash[k].index] * v.weight / airportHash[k].outweight
-            Q[i] = L * sumPR + (1-L)/n
+            Q[i] = L * sumPR + (1-L)/n + totalDiscPR
+        stop = checkDifference(tol, P, Q)
         P = Q
-        print(sum(i for i in P))
-        it += 1
- 
-    for x in P:
-        Res.append(x)
-        
+        disconnectPRvariable = (1-L)/n + totalDiscPR
+        #print(sum(i for i in P))    # Check that at each iteration, P sums 1
+        its += 1
+
+    global PR
+    PR = P.copy()
+
     return its
 
+def checkDifference(tol, P, Q):
+    for x, y in zip(P,Q):
+        if (abs(x-y) > tol):
+            return False
+    return True
 
 def outputPageRanks():
-    for x in Res:
-        print(x)
-    
+    L = []
+    i = 0
+    for k in airportHash:
+        a = airportHash[k]
+        x = (a.name, PR[i])
+        L.append(x)
+        i += 1
+    L.sort(key = lambda x: x[1], reverse = True)
+    print("#### (Airport Name, PR) ####")
+    for (x,y) in L:
+        print("(%s, %s)"%(x, y))
+
+
 
 def main(argv=None):
     readAirports("airports.txt")
@@ -134,8 +155,8 @@ def main(argv=None):
     time1 = time.time()
     iterations = computePageRanks()
     time2 = time.time()
-    #outputPageRanks()
-    print("#Iterations:", iterations)
+    outputPageRanks()
+    print("#Iterations:", iterations, ", with", tol, "Tolerance between iterations")
     print("Time of computePageRanks():", time2-time1)
 
 
