@@ -21,7 +21,6 @@ class Airport:
     def __init__ (self, iden=None, name=None, index=None):
         self.code = iden
         self.name = name
-        self.routes = []
         self.routeHash = dict()
         self.outweight = 0.0
         self.index = index
@@ -41,8 +40,6 @@ class Airport:
 
 
 
-edgeList = [] # list of Edge
-edgeHash = dict() # hash of edge to ease the match
 airportList = [] # list of Airport
 airportHash = dict() # hash key IATA code -> Airport
 PR = []
@@ -103,11 +100,11 @@ def computePageRanks():
     P = [1/n]*n
     # Disconnected nodes PR calculation
     discN = len(list(filter(lambda a: a.outweight == 0.0, airportList)))
-    disconnectedPRfixed = (L/float(n-1))*discN  # outweight = n-1, so L/(n-1), and this for all discN nodes
+    disconnectedPRfixed = discN*(L/float(n-1))  # outweight = n-1, so L/(n-1), and this for all discN nodes
     disconnectPRvariable = 1/n  # All values in P at the first iteration are 1/n
     ######## ------------------------------------------------------------------------------------- ########
     stop = False
-    its = 0
+    it = 0
     while (not stop):
         Q = [0.0]*n
         for i in range(n):
@@ -120,13 +117,13 @@ def computePageRanks():
         stop = checkDifference(tol, P, Q)
         P = Q
         disconnectPRvariable = (1-L)/n + totalDiscPR
-        #print(sum(i for i in P))    # Check that at each iteration, P sums 1
-        its += 1
+        print("sum PR (iter", it, "):" , sum(i for i in P))    # Check that at each iteration, P sums 1
+        it += 1
 
     global PR
     PR = P.copy()
 
-    return its
+    return it
 
 def checkDifference(tol, P, Q):
     for x, y in zip(P,Q):
@@ -143,10 +140,19 @@ def outputPageRanks():
         L.append(x)
         i += 1
     L.sort(key = lambda x: x[1], reverse = True)
-    print("#### (Airport Name : PR) ####")
-    for (x,y) in L:
-        print("(%s : %s)"%(x, y))
 
+    s = ""
+    s += "################ (Airport Name : PR) ################\n"
+    for (x,y) in L:
+        s += ("(%s : %s)\n"%(x, y))
+
+    writeToFile(s)
+
+
+def writeToFile(s):
+    f = open("output.txt", "w")
+    f.write(s)
+    f.close()
 
 
 def main(argv=None):
