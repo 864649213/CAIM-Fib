@@ -45,7 +45,7 @@ airportHash = dict() # hash key IATA code -> Airport
 PR = []
 
 L = 0.85
-tol = 10**(-10)
+tol = 10**(-12)
 
 def readAirports(fd):
     print("Reading Airport file from {0}".format(fd))
