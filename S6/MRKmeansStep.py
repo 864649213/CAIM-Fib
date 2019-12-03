@@ -23,6 +23,9 @@ from mrjob.step import MRStep
 __author__ = 'bejar'
 
 
+    
+    
+
 class MRKmeansStep(MRJob):
     prototypes = {}
 
@@ -34,26 +37,6 @@ class MRKmeansStep(MRJob):
         Words must be alphabeticaly ordered
 
         The result should be always a value in the range [0,1]
-        """
-
-
-        """
-        # jacc(d1,d2) = inters(d1,d2) / union(d1,d2)
-        intersection = 0
-        i = 0
-        j = 0
-        while (i < len(prot) and j < len(doc)):
-            if (prot[i][0] < doc[j]):
-                i += 1
-            elif (prot[i][0] > doc[j]):
-                j += 1
-            else:
-                intersection += 1
-                i += 1
-                j += 1
-
-        union = len(prot) + len(doc) - intersection
-        return float(intersection)/float(union)
         """
 
 
@@ -70,14 +53,15 @@ class MRKmeansStep(MRJob):
                 i += 1
                 j += 1
 
+        # (norm_2)^2 = sum of squares
         union = 0
-        for k,v in prot:
-            union += v*v
-        for v in doc:
-            union += v*v
-        union = union - intersection
+        for i in range(len(prot)):
+            union += prot[i][1]**2
+        
+        union += len(doc)   # knowing that 1^2 = 1, norm_2(doc) = len(doc)
 
-        return float(intersection)/float(union)
+        return float(intersection)/float(union - intersection)
+        
 
 
 
@@ -120,15 +104,18 @@ class MRKmeansStep(MRJob):
         lwords = words.split()
         # Compute map here
         assignedProt = next(iter(self.prototypes))
-        minDist = jaccard(self.prototypes[assignedProt], lwords)
+        minDist = 1-self.jaccard(self.prototypes[assignedProt], lwords) # distance is complement of jaccard similarity
 
-        for k,v in self.prototypes:
-            dist = jaccard(v, lwords)
+        f = open("./output.txt", 'w')
+        
+        for k,v in self.prototypes.items():
+            dist = 1-self.jaccard(v, lwords)
+            f.write(str(dist))
             if (dist < minDist):
                 minDist = dist
-                assignedProt = key
+                assignedProt = k
 
-
+        f.close()
         # Return pair key, value
         yield assignedProt, (doc,lwords)
 
@@ -150,12 +137,12 @@ class MRKmeansStep(MRJob):
         :return:
         """
         n = 0
-        clusterDocs = []
+        docList = []
         protoMap = dict()
 
         for doc in values:
             n += 1
-            clusterDocs.append(doc[0])
+            docList.append(doc[0])
             for token in doc[1]:
                 if token in protoMap:
                     protoMap[token] += 1
@@ -163,11 +150,14 @@ class MRKmeansStep(MRJob):
                     protoMap[token] = 1
 
         # List of pairs (term, freq)
-        protoList = []
-        for k,v in protoMap:
-            protoList.append(k, float(protoMap[k])/float(n))
+        termList = []
+        for k,v in protoMap.items():
+            termList.append((k, float(protoMap[k])/float(n)))
+            
+        docList = sorted(docList)
+        termList = sorted(termList, key = lambda x: x[0])
 
-        yield key, protoList
+        yield key, (docList, termList)
 
     def steps(self):
         return [MRStep(mapper_init=self.load_data, mapper=self.assign_prototype,
